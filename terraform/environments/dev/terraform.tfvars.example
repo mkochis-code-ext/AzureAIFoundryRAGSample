@@ -1,0 +1,39 @@
+# Example terraform variables file
+# Copy this file to terraform.tfvars and update with your values
+
+resource_group_name = "rg-azureaifoundry-dev"
+location            = "eastus"
+
+subscription_id = "" # Subscription Id
+
+# Environment Configuration
+environment_prefix = "dev"
+workload          = "aif"
+location          = "eastus"
+data_location     = ""  # Defaults to location if not specified
+
+tags = {
+  Environment = "dev"
+  Project     = "AzureAIFoundry"
+  ManagedBy   = "Terraform"
+}
+
+# APIM Configuration
+apim_publisher_name  = "Contoso Dev"
+apim_publisher_email = "admin@contoso.com"
+apim_sku             = "Developer"
+apim_sku_count       = 1
+
+# OpenAI Configuration
+openai_deployment_name = "gpt41"
+openai_model_name      = "gpt-4.1"
+openai_model_version   = "2025-04-14"
+openai_model_sku_name  = "GlobalStandard"
+openai_model_sku_capacity = 50
+
+
+tags = {
+  Environment = "dev"
+  Project     = "AzureAIFoundry"
+  ManagedBy   = "Terraform"
+}
