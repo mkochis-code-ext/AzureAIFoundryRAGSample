@@ -1,5 +1,7 @@
 # Azure AI Foundry RAG Sample with Azure AI Search
 
+> **Disclaimer:** This repository is provided purely as a demonstration of these workflows. You are free to use, modify, and adapt the code as you see fit; however, it is offered as-is with no warranty or support of any kind. Use it at your own risk. This is not production-ready code — it should be reviewed, understood, and rewritten to suit your own environment before any real-world use.
+
 This repository demonstrates how to build a complete Retrieval-Augmented Generation (RAG) solution using Azure AI Foundry. The solution connects an AI Agent to document data stored in Azure Blob Storage through Azure AI Search, with secure access via Azure API Management (APIM).
 
 ## Architecture Overview
