@@ -414,10 +414,16 @@ resource "azurerm_role_assignment" "apim_cognitive_user" {
 }
 
 # The deploying principal needs permission to create AI agents via the REST API.
-resource "azurerm_role_assignment" "deployer_cognitive_ai_developer" {
+# "Azure AI User" includes the Microsoft.CognitiveServices/accounts/AIServices/agents/* data action.
+resource "azurerm_role_assignment" "deployer_cognitive_ai_user" {
   scope                = module.cognitive.id
-  role_definition_name = "Azure AI Developer"
+  role_definition_name = "Azure AI User"
   principal_id         = data.azurerm_client_config.current.object_id
+}
+
+resource "time_sleep" "wait_for_ai_developer_role" {
+  depends_on      = [azurerm_role_assignment.deployer_cognitive_ai_user]
+  create_duration = "60s"
 }
 
 module "cognitive" {
@@ -523,6 +529,6 @@ module "ai_agent" {
   resource_group_name        = module.resource_group.name
   foundry_name          = module.cognitive.name
 
-  depends_on = [ module.cognitive_deployment, module.search_service_index ]
+  depends_on = [ module.cognitive_deployment, module.search_service_index, time_sleep.wait_for_ai_developer_role ]
 }
 
