@@ -30,7 +30,7 @@ resource "null_resource" "foundry_agent" {
     always_run = "1"
   }
   provisioner "local-exec" {
-    interpreter = ["PowerShell", "-Command"]
+    interpreter = ["pwsh", "-Command"]
     command = <<-EOT
       $base64Json = "${base64encode(jsonencode({
           name = var.name

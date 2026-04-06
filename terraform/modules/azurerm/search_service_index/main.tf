@@ -12,7 +12,7 @@ resource "null_resource" "datasource" {
         always_run = "1"
     }
   provisioner "local-exec" {
-    interpreter = ["PowerShell", "-Command"]
+    interpreter = ["pwsh", "-Command"]
     command = <<EOT
         $base64Json = "${
             base64encode(
@@ -73,7 +73,7 @@ resource "null_resource" "index" {
         always_run = "1"
     }
     provisioner "local-exec" {
-        interpreter = ["PowerShell", "-Command"]
+        interpreter = ["pwsh", "-Command"]
         command = <<EOT
             $base64Json = "${base64encode(jsonencode(
                 {
@@ -247,7 +247,7 @@ resource "null_resource" "skillset" {
         always_run = "1"
     }
     provisioner "local-exec" {
-        interpreter = ["PowerShell", "-Command"]
+        interpreter = ["pwsh", "-Command"]
         command = <<EOT
             $base64Json = "${base64encode(jsonencode(
                 {
@@ -337,7 +337,7 @@ resource "null_resource" "indexer" {
         always_run = "1"
     }
     provisioner "local-exec" {
-        interpreter = ["PowerShell", "-Command"]
+        interpreter = ["pwsh", "-Command"]
         command = <<EOT
             $base64Json = "${base64encode(jsonencode(
             {
