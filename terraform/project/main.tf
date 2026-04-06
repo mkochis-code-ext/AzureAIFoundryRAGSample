@@ -413,6 +413,13 @@ resource "azurerm_role_assignment" "apim_cognitive_user" {
   depends_on = [module.api_management]
 }
 
+# The deploying principal needs permission to create AI agents via the REST API.
+resource "azurerm_role_assignment" "deployer_cognitive_ai_developer" {
+  scope                = module.cognitive.id
+  role_definition_name = "Azure AI Developer"
+  principal_id         = data.azurerm_client_config.current.object_id
+}
+
 module "cognitive" {
   source = "../modules/azurerm/cognitive/"
 
