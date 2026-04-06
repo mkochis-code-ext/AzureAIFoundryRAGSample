@@ -73,6 +73,8 @@ This architecture prioritizes security by minimizing public exposure and using i
 
 ### Step 1: Deploy Infrastructure
 
+#### Option A: Local Deployment (Manual)
+
 1.  Navigate to the `terraform/environments/dev` directory:
     ```bash
     cd terraform/environments/dev
@@ -109,6 +111,99 @@ This architecture prioritizes security by minimizing public exposure and using i
     *   `search_service_name`
     *   `cognitive_service_endpoint`
     *   `search_service_endpoint`
+
+### Option B: Deploy via GitHub Actions (CI/CD)
+
+This repository includes GitHub Actions workflows for automated deployment, destruction, and backend bootstrapping.
+
+#### 1. Create a Service Principal with OIDC Federation
+
+Create an Entra ID app registration and configure federated credentials for GitHub Actions (no client secret required):
+
+```bash
+# Set your values
+GITHUB_ORG="<your-github-org-or-username>"
+GITHUB_REPO="<your-repo-name>"
+SUBSCRIPTION_ID="<your-azure-subscription-id>"
+
+# Create the app registration
+APP_ID=$(az ad app create --display-name "github-actions-aifoundry" --query appId -o tsv)
+
+# Create the service principal
+SP_OBJECT_ID=$(az ad sp create --id "$APP_ID" --query id -o tsv)
+
+# Assign Owner on the subscription (needed for resource creation + RBAC assignments)
+az role assignment create \
+  --role "Owner" \
+  --assignee-object-id "$SP_OBJECT_ID" \
+  --assignee-principal-type ServicePrincipal \
+  --scope "/subscriptions/$SUBSCRIPTION_ID"
+
+# Add federated credential for the "dev" environment
+az ad app federated-credential create --id "$APP_ID" --parameters '{
+  "name": "github-env-dev",
+  "issuer": "https://token.actions.githubusercontent.com",
+  "subject": "repo:'"$GITHUB_ORG/$GITHUB_REPO"':environment:dev",
+  "audiences": ["api://AzureADTokenExchange"]
+}'
+
+# Add federated credential for the main branch (used by the plan job)
+az ad app federated-credential create --id "$APP_ID" --parameters '{
+  "name": "github-ref-main",
+  "issuer": "https://token.actions.githubusercontent.com",
+  "subject": "repo:'"$GITHUB_ORG/$GITHUB_REPO"':ref:refs/heads/main",
+  "audiences": ["api://AzureADTokenExchange"]
+}'
+
+# Print the values you need for GitHub secrets
+TENANT_ID=$(az account show --query tenantId -o tsv)
+echo "AZURE_CLIENT_ID=$APP_ID"
+echo "AZURE_TENANT_ID=$TENANT_ID"
+echo "AZURE_SUBSCRIPTION_ID=$SUBSCRIPTION_ID"
+```
+
+#### 2. Configure GitHub Secrets & Variables
+
+In your repository go to **Settings > Secrets and variables > Actions**.
+
+**Secrets** (sensitive):
+
+| Secret | Description |
+|---|---|
+| `AZURE_CLIENT_ID` | App registration client/application ID (from step above) |
+| `AZURE_TENANT_ID` | Azure AD / Entra ID tenant ID |
+| `AZURE_SUBSCRIPTION_ID` | Target Azure subscription ID |
+
+**Variables** (non-sensitive — set after bootstrapping the backend in step 3):
+
+| Variable | Description | Example |
+|---|---|---|
+| `TF_BACKEND_RESOURCE_GROUP` | Resource group for Terraform state storage | `rg-tfstate` |
+| `TF_BACKEND_STORAGE_ACCOUNT` | Storage account name for state | `sttfstatedev` |
+| `TF_BACKEND_CONTAINER` | Blob container name | `tfstate` |
+| `TF_BACKEND_KEY` | State file blob name | `aifoundry-rag.tfstate` |
+
+Also create a **`dev` environment** under **Settings > Environments** (optional: add required reviewers as an approval gate).
+
+#### 3. Bootstrap the Terraform State Backend
+
+Run the **"Bootstrap Terraform Backend"** workflow from **Actions > Bootstrap Terraform Backend > Run workflow**. Provide the resource group name, storage account name, container name, and Azure region. The workflow will:
+
+- Create the resource group and storage account (TLS 1.2, no public blob access)
+- Create the blob container
+- Grant the service principal `Storage Blob Data Contributor` on the storage account
+
+After it completes, set the four `TF_BACKEND_*` variables listed above using the values from the workflow summary.
+
+#### 4. Deploy
+
+Push to `main` (changes under `terraform/`) or manually trigger the **"Deploy Infrastructure"** workflow. It runs `terraform plan`, then `terraform apply` twice (to handle RBAC propagation) with an environment approval gate.
+
+#### 5. Destroy
+
+Manually trigger the **"Destroy Infrastructure"** workflow from **Actions > Destroy Infrastructure > Run workflow**. You must type `destroy` in the confirmation input to proceed.
+
+---
 
 ### Step 2: Grant Your User Storage Access
 

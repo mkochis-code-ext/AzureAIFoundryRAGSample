@@ -1,0 +1,104 @@
+name: "Bootstrap Terraform Backend"
+
+on:
+  workflow_dispatch:
+    inputs:
+      resource_group:
+        description: "Resource group name for state storage"
+        required: true
+        default: "rg-aifoundryrag-tfstate"
+        type: string
+      storage_account:
+        description: "Storage account name (must be globally unique, 3-24 chars, lowercase alphanumeric)"
+        required: true
+        default: "aifoundryragtfstate"
+        type: string
+      container:
+        description: "Blob container name for state files"
+        required: true
+        default: "tfstate"
+        type: string
+      location:
+        description: "Azure region"
+        required: true
+        default: "canadacentral"
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  bootstrap:
+    name: Create Terraform State Backend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Create Resource Group
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az group create \
+              --name "${{ inputs.resource_group }}" \
+              --location "${{ inputs.location }}"
+
+      - name: Create Storage Account
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az storage account create \
+              --name "${{ inputs.storage_account }}" \
+              --resource-group "${{ inputs.resource_group }}" \
+              --location "${{ inputs.location }}" \
+              --sku Standard_LRS \
+              --kind StorageV2 \
+              --min-tls-version TLS1_2 \
+              --allow-blob-public-access false \
+              --https-only true
+
+      - name: Create Blob Container
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az storage container create \
+              --name "${{ inputs.container }}" \
+              --account-name "${{ inputs.storage_account }}" \
+              --auth-mode login
+
+      - name: Grant Service Principal access to state storage
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            SP_OBJECT_ID=$(az ad sp show --id "${{ secrets.AZURE_CLIENT_ID }}" --query id -o tsv)
+            STORAGE_ID=$(az storage account show \
+              --name "${{ inputs.storage_account }}" \
+              --resource-group "${{ inputs.resource_group }}" \
+              --query id -o tsv)
+            az role assignment create \
+              --role "Storage Blob Data Contributor" \
+              --assignee-object-id "$SP_OBJECT_ID" \
+              --assignee-principal-type ServicePrincipal \
+              --scope "$STORAGE_ID"
+
+      - name: Summary
+        run: |
+          echo "### Terraform Backend Created" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Setting | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Resource Group | \`${{ inputs.resource_group }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Storage Account | \`${{ inputs.storage_account }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Container | \`${{ inputs.container }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Location | \`${{ inputs.location }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next steps:** Set these as GitHub Actions variables:" >> $GITHUB_STEP_SUMMARY
+          echo "- \`TF_BACKEND_RESOURCE_GROUP\` = \`${{ inputs.resource_group }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`TF_BACKEND_STORAGE_ACCOUNT\` = \`${{ inputs.storage_account }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`TF_BACKEND_CONTAINER\` = \`${{ inputs.container }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`TF_BACKEND_KEY\` = \`aifoundry-rag.tfstate\`" >> $GITHUB_STEP_SUMMARY
