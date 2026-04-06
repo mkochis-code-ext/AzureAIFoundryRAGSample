@@ -45,6 +45,7 @@ jobs:
             -backend-config="container_name=${{ vars.TF_BACKEND_CONTAINER }}" \
             -backend-config="key=${{ vars.TF_BACKEND_KEY }}" \
             -backend-config="use_oidc=true" \
+            -backend-config="use_azuread_auth=true" \
             -backend-config="client_id=${{ secrets.AZURE_CLIENT_ID }}" \
             -backend-config="tenant_id=${{ secrets.AZURE_TENANT_ID }}" \
             -backend-config="subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}"
@@ -100,6 +101,7 @@ jobs:
             -backend-config="container_name=${{ vars.TF_BACKEND_CONTAINER }}" \
             -backend-config="key=${{ vars.TF_BACKEND_KEY }}" \
             -backend-config="use_oidc=true" \
+            -backend-config="use_azuread_auth=true" \
             -backend-config="client_id=${{ secrets.AZURE_CLIENT_ID }}" \
             -backend-config="tenant_id=${{ secrets.AZURE_TENANT_ID }}" \
             -backend-config="subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}"
