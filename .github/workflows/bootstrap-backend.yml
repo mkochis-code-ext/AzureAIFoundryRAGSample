@@ -60,16 +60,8 @@ jobs:
               --kind StorageV2 \
               --min-tls-version TLS1_2 \
               --allow-blob-public-access false \
+              --allow-shared-key-access false \
               --https-only true
-
-      - name: Create Blob Container
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            az storage container create \
-              --name "${{ inputs.container }}" \
-              --account-name "${{ inputs.storage_account }}" \
-              --auth-mode login
 
       - name: Grant Service Principal access to state storage
         uses: azure/cli@v2
@@ -85,6 +77,18 @@ jobs:
               --assignee-object-id "$SP_OBJECT_ID" \
               --assignee-principal-type ServicePrincipal \
               --scope "$STORAGE_ID"
+
+      - name: Wait for RBAC propagation
+        run: sleep 30
+
+      - name: Create Blob Container
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az storage container create \
+              --name "${{ inputs.container }}" \
+              --account-name "${{ inputs.storage_account }}" \
+              --auth-mode login
 
       - name: Summary
         run: |

@@ -120,46 +120,48 @@ This repository includes GitHub Actions workflows for automated deployment, dest
 
 Create an Entra ID app registration and configure federated credentials for GitHub Actions (no client secret required):
 
-```bash
+```powershell
 # Set your values
-GITHUB_ORG="<your-github-org-or-username>"
-GITHUB_REPO="<your-repo-name>"
-SUBSCRIPTION_ID="<your-azure-subscription-id>"
+$GITHUB_ORG = "<your-github-org-or-username>"
+$GITHUB_REPO = "<your-repo-name>"
+$SUBSCRIPTION_ID = "<your-azure-subscription-id>"
 
 # Create the app registration
-APP_ID=$(az ad app create --display-name "github-actions-aifoundry" --query appId -o tsv)
+$APP_ID = az ad app create --display-name "github-actions-aifoundry" --query appId -o tsv
 
 # Create the service principal
-SP_OBJECT_ID=$(az ad sp create --id "$APP_ID" --query id -o tsv)
+$SP_OBJECT_ID = az ad sp create --id $APP_ID --query id -o tsv
 
 # Assign Owner on the subscription (needed for resource creation + RBAC assignments)
-az role assignment create \
-  --role "Owner" \
-  --assignee-object-id "$SP_OBJECT_ID" \
-  --assignee-principal-type ServicePrincipal \
+az role assignment create `
+  --role "Owner" `
+  --assignee-object-id $SP_OBJECT_ID `
+  --assignee-principal-type ServicePrincipal `
   --scope "/subscriptions/$SUBSCRIPTION_ID"
 
 # Add federated credential for the "dev" environment
-az ad app federated-credential create --id "$APP_ID" --parameters '{
-  "name": "github-env-dev",
-  "issuer": "https://token.actions.githubusercontent.com",
-  "subject": "repo:'"$GITHUB_ORG/$GITHUB_REPO"':environment:dev",
-  "audiences": ["api://AzureADTokenExchange"]
-}'
+$devParams = (@{
+  name      = "github-env-dev"
+  issuer    = "https://token.actions.githubusercontent.com"
+  subject   = "repo:${GITHUB_ORG}/${GITHUB_REPO}:environment:dev"
+  audiences = @("api://AzureADTokenExchange")
+} | ConvertTo-Json -Compress) -replace '"', '\"'
+az ad app federated-credential create --id $APP_ID --parameters $devParams
 
 # Add federated credential for the main branch (used by the plan job)
-az ad app federated-credential create --id "$APP_ID" --parameters '{
-  "name": "github-ref-main",
-  "issuer": "https://token.actions.githubusercontent.com",
-  "subject": "repo:'"$GITHUB_ORG/$GITHUB_REPO"':ref:refs/heads/main",
-  "audiences": ["api://AzureADTokenExchange"]
-}'
+$mainParams = (@{
+  name      = "github-ref-main"
+  issuer    = "https://token.actions.githubusercontent.com"
+  subject   = "repo:${GITHUB_ORG}/${GITHUB_REPO}:ref:refs/heads/main"
+  audiences = @("api://AzureADTokenExchange")
+} | ConvertTo-Json -Compress) -replace '"', '\"'
+az ad app federated-credential create --id $APP_ID --parameters $mainParams
 
 # Print the values you need for GitHub secrets
-TENANT_ID=$(az account show --query tenantId -o tsv)
-echo "AZURE_CLIENT_ID=$APP_ID"
-echo "AZURE_TENANT_ID=$TENANT_ID"
-echo "AZURE_SUBSCRIPTION_ID=$SUBSCRIPTION_ID"
+$TENANT_ID = az account show --query tenantId -o tsv
+Write-Host "AZURE_CLIENT_ID=$APP_ID"
+Write-Host "AZURE_TENANT_ID=$TENANT_ID"
+Write-Host "AZURE_SUBSCRIPTION_ID=$SUBSCRIPTION_ID"
 ```
 
 #### 2. Configure GitHub Secrets & Variables

@@ -50,7 +50,8 @@ jobs:
             -backend-config="resource_group_name=${{ vars.TF_BACKEND_RESOURCE_GROUP }}" \
             -backend-config="storage_account_name=${{ vars.TF_BACKEND_STORAGE_ACCOUNT }}" \
             -backend-config="container_name=${{ vars.TF_BACKEND_CONTAINER }}" \
-            -backend-config="key=${{ vars.TF_BACKEND_KEY }}"
+            -backend-config="key=${{ vars.TF_BACKEND_KEY }}" \
+            -backend-config="use_oidc=true"
 
       - name: Terraform Destroy
         run: terraform destroy -auto-approve -input=false
