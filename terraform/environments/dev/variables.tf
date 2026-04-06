@@ -59,27 +59,29 @@ variable "apim_sku_count" {
 variable "openai_deployment_name" {
   description = "Name of the OpenAI deployment"
   type        = string
-  default     = "gpt-4"
+  default     = "gpt-4.1"
 }
 
 variable "openai_model_name" {
   description = "Name of the OpenAI model"
   type        = string
-  default     = "gpt-4"
+  default     = "gpt-4.1"
 }
 
 variable "openai_model_version" {
   description = "Version of the OpenAI model"
   type        = string
-  default     = "1106-Preview"
+  default     = "2025-04-14"
 }
 
 variable "openai_model_sku_name" {
   description = "The SKU Name for the model deployment"
+  default     = "GlobalStandard"
   type = string
 }
 
 variable "openai_model_sku_capacity" {
   description = "The SKU Capacity for the model deployment"
+  default = 50
   type = number
 }
